@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Roundtable - talk with Claude, ChatGPT and Gemini in one shared conversation.
+Roundtable - talk with Claude, ChatGPT, Gemini and Meta in one shared conversation.
 
 Run:   python roundtable.py
 Then:  your browser opens http://127.0.0.1:8765
@@ -47,6 +47,14 @@ PROVIDERS = {
         "env": ["GEMINI_API_KEY", "GOOGLE_API_KEY"],
         "default_model": "gemini-4-argon",
         "base": os.environ.get("ROUNDTABLE_GEMINI_URL", "https://generativelanguage.googleapis.com"),
+    },
+    "meta": {
+        "name": "Meta",
+        "env": ["LLAMA_API_KEY"],
+        "default_model": "Llama-4-Maverick-17B-128E-Instruct-FP8",
+        # Meta's hosted Llama API, OpenAI-compatible surface. Access is
+        # preview / waitlist (US-only at time of writing); see the README.
+        "base": os.environ.get("ROUNDTABLE_LLAMA_URL", "https://api.llama.com/compat/v1"),
     },
 }
 
@@ -228,7 +236,29 @@ def call_gemini(key, model, system, messages):
     return text
 
 
-CALLERS = {"claude": call_claude, "chatgpt": call_chatgpt, "gemini": call_gemini}
+def call_meta(key, model, system, messages):
+    # Llama API, OpenAI-compatible endpoint: POST /chat/completions with a
+    # Bearer key, returning the usual OpenAI-style choices[0].message.content.
+    body = {
+        "model": model,
+        "messages": ([{"role": "system", "content": system}] if system else [])
+                    + [{"role": m["role"], "content": m["text"]} for m in messages],
+    }
+    data = http_json(PROVIDERS["meta"]["base"] + "/chat/completions",
+                     {"Authorization": "Bearer " + key}, body)
+    choices = data.get("choices") or []
+    if not choices:
+        raise ProviderError("Meta returned no choices.")
+    msg = (choices[0].get("message") or {})
+    text = msg.get("content") or ""
+    if isinstance(text, list):
+        text = "".join(c.get("text", "") for c in text if isinstance(c, dict))
+    if not str(text).strip():
+        raise ProviderError("Meta returned no text (finish reason: %s)." % choices[0].get("finish_reason"))
+    return str(text)
+
+
+CALLERS = {"claude": call_claude, "chatgpt": call_chatgpt, "gemini": call_gemini, "meta": call_meta}
 
 
 def list_models(provider, key):
@@ -242,6 +272,9 @@ def list_models(provider, key):
                 "whisper", "dall-e", "sora", "live", "search")
         ids = [m.get("id", "") for m in data.get("data", [])]
         ids = [i for i in ids if i.startswith(("gpt-", "o1", "o3", "o4", "chat")) and not any(s in i for s in skip)]
+    elif provider == "meta":
+        data = http_json(base + "/models", {"Authorization": "Bearer " + key})
+        ids = [m.get("id", "") for m in data.get("data", [])]
     else:
         data = http_json(base + "/v1beta/models?pageSize=1000", {"x-goog-api-key": key})
         ids = [m.get("name", "").replace("models/", "", 1) for m in data.get("models", [])
@@ -456,12 +489,12 @@ PAGE = r"""<!DOCTYPE html>
 <style>
 :root{
   --bg:#f6f5f1; --panel:#ffffff; --ink:#1d1d1b; --muted:#6b6a65; --line:#e2e0d8; --soft:#efede6;
-  --claude:#b8562f; --chatgpt:#1f7a5c; --gemini:#3a5fc4; --you:#1d1d1b; --err:#a62b2b;
+  --claude:#b8562f; --chatgpt:#1f7a5c; --gemini:#3a5fc4; --meta:#7c5cd6; --you:#1d1d1b; --err:#a62b2b;
   --radius:10px;
 }
 @media (prefers-color-scheme: dark){
   :root{ --bg:#17181a; --panel:#202225; --ink:#ecebe6; --muted:#9a9993; --line:#33363a; --soft:#2a2d31;
-         --claude:#e58a61; --chatgpt:#55c39c; --gemini:#86a4f5; --you:#ecebe6; --err:#f08080; }
+         --claude:#e58a61; --chatgpt:#55c39c; --gemini:#86a4f5; --meta:#a78bfa; --you:#ecebe6; --err:#f08080; }
 }
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
@@ -502,7 +535,7 @@ button.link{border:0;background:none;padding:0;color:var(--muted);font-size:12.5
 .card{background:var(--panel);border:1px solid var(--line);border-top:3px solid var(--c);border-radius:var(--radius);padding:12px 14px;min-width:0}
 .card .who{color:var(--c);display:flex;align-items:baseline}
 .card .who .sp{flex:1}
-.card.claude{--c:var(--claude)} .card.chatgpt{--c:var(--chatgpt)} .card.gemini{--c:var(--gemini)}
+.card.claude{--c:var(--claude)} .card.chatgpt{--c:var(--chatgpt)} .card.gemini{--c:var(--gemini)} .card.meta{--c:var(--meta)}
 .card .err{color:var(--err);font-size:13.5px;overflow-wrap:anywhere}
 .dots{color:var(--muted)} .dots i{animation:b 1.2s infinite;font-style:normal;opacity:.2}
 .dots i:nth-child(2){animation-delay:.2s} .dots i:nth-child(3){animation-delay:.4s}
@@ -528,7 +561,7 @@ button.link{border:0;background:none;padding:0;color:var(--muted);font-size:12.5
 .row .sp{flex:1}
 .chk{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border:1px solid var(--line);border-radius:99px;background:var(--panel);font-size:13.5px;cursor:pointer;user-select:none}
 .chk input{accent-color:var(--c);margin:0}
-.chk.claude{--c:var(--claude)} .chk.chatgpt{--c:var(--chatgpt)} .chk.gemini{--c:var(--gemini)}
+.chk.claude{--c:var(--claude)} .chk.chatgpt{--c:var(--chatgpt)} .chk.gemini{--c:var(--gemini)} .chk.meta{--c:var(--meta)}
 .chk b{color:var(--c)}
 .hint{color:var(--muted);font-size:12.5px}
 select{border:1px solid var(--line);background:var(--panel);border-radius:8px;padding:6px 8px}
@@ -549,7 +582,7 @@ label{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 3px}
 </head>
 <body>
 <aside id="side">
-  <h1>Roundtable<small>Claude · ChatGPT · Gemini · you</small></h1>
+  <h1>Roundtable<small>Claude · ChatGPT · Gemini · Meta · you</small></h1>
   <button id="new" class="primary">New conversation</button>
   <div id="convs"></div>
   <button id="openSettings">Settings</button>
@@ -588,9 +621,9 @@ label{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 3px}
 
 <script>
 "use strict";
-const ORDER = ['claude','chatgpt','gemini'];
-const NAMES = {claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini'};
-const KEY_HELP = {claude:'console.anthropic.com', chatgpt:'platform.openai.com', gemini:'aistudio.google.com'};
+const ORDER = ['claude','chatgpt','gemini','meta'];
+const NAMES = {claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', meta:'Meta'};
+const KEY_HELP = {claude:'console.anthropic.com', chatgpt:'platform.openai.com', gemini:'aistudio.google.com', meta:'llama.developer.meta.com'};
 const CROSS_TEXT = "Cross-examination round. Read the other participants' most recent answers above. " +
   "Point out specific errors, gaps or unsupported claims; say where you agree and where you disagree; " +
   "then state whether you are keeping or changing your position, and why. Do not agree just to be agreeable. " +
@@ -620,8 +653,10 @@ async function api(path, opts){
 /* ---------- prompts ---------- */
 function systemPrompt(self){
   const others = ORDER.filter(p => p !== self).map(p => NAMES[p]);
+  const otherText = others.length === 1 ? others[0] :
+    others.slice(0, -1).join(", ") + " and " + others[others.length - 1];
   return "You are " + NAMES[self] + ", taking part in a roundtable discussion with a human moderator (" + cfg.name +
-    ") and two other AI models, " + others[0] + " and " + others[1] + ".\n\n" +
+    ") and " + others.length + " other AI model" + (others.length === 1 ? "" : "s") + ", " + otherText + ".\n\n" +
     "How the transcript works: your own earlier replies appear as your turns. Everything else arrives labeled in " +
     "square brackets, for example \"[" + cfg.name + "]:\" for the moderator and \"[" + others[0] + "]:\" for another model.\n\n" +
     "Ground rules:\n" +
@@ -850,7 +885,7 @@ function render(){
   if(!conv.events.length){
     const e = el('div', 'empty');
     e.innerHTML = '<h2>Put a question to the table</h2>' +
-      '<p>All three models answer on their own first, without seeing each other. ' +
+      '<p>All the models answer on their own first, without seeing each other. ' +
       'Then use <b>Cross-examine</b> to have them critique one another, keep questioning them yourself, ' +
       'and ask one for a <b>synthesis</b> when the argument has run its course.</p>';
     inner.append(e); return;
@@ -859,7 +894,7 @@ function render(){
   for(const ev of conv.events){
     if(ev.type === 'ai'){
       if(!grid){ grid = el('div', 'grid'); grid._n = 0; inner.append(grid); }
-      grid.append(card(ev)); grid._n++; grid.style.setProperty('--n', Math.min(grid._n, 3));
+      grid.append(card(ev)); grid._n++; grid.style.setProperty('--n', Math.min(grid._n, 4));
       continue;
     }
     grid = null;

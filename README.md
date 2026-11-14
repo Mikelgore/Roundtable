@@ -1,6 +1,6 @@
 # Roundtable
 
-One conversation with Claude, ChatGPT, and Gemini at the same time. Each model sees what the others said, so the four of you can reason a question out together.
+One conversation with Claude, ChatGPT, Gemini, and Meta at the same time. Each model sees what the others said, so the five of you can reason a question out together.
 
 Roundtable is a single Python file. It runs a small web server on your own computer and opens a page in your browser. There is nothing to install beyond Python.
 
@@ -14,8 +14,11 @@ Roundtable is a single Python file. It runs a small web server on your own compu
 | Claude | console.anthropic.com | `sk-ant-` |
 | ChatGPT | platform.openai.com | `sk-proj-` or `sk-` |
 | Gemini | aistudio.google.com | usually `AIza` |
+| Meta | llama.developer.meta.com | issued in the Llama API dashboard |
 
 API access is billed per use and is separate from a Claude, ChatGPT, or Gemini chat subscription. Each API account needs its own billing set up.
+
+Meta is the odd one out: there is no public API for the Meta AI chat app. Roundtable uses Meta's hosted **Llama API** (`api.llama.com`, OpenAI-compatible) instead. At time of writing that API is in preview behind a waitlist and reported as US-only, so request access first and paste in the key once approved.
 
 ## Quick start
 
@@ -51,7 +54,7 @@ Conversations are saved automatically and listed in the sidebar. Hover over one 
 ### Getting good results
 
 - Read the three independent answers before cross-examining. Where they differ is where to dig.
-- Agreement among the three is weak evidence. The models share much of their training, so they can be wrong in the same way.
+- Agreement among the models is weak evidence. The models share much of their training, so they can be wrong in the same way.
 - You are the verifier. The app shows you where to look; it does not check facts. The models answer from memory and cannot browse the web, so confirm any citation before relying on it.
 - When a dispute narrows to two models, untick the third and question those two directly.
 - One cross-examination round is usually enough. Once the replies turn polite and vague, more rounds add little.
@@ -70,6 +73,7 @@ Default models:
 | Claude | `claude-opus-5-5` |
 | ChatGPT | `gpt-6.1-sol` |
 | Gemini | `gemini-4-argon` |
+| Meta | `Llama-4-Maverick-17B-128E-Instruct-FP8` |
 
 Providers retire models over time. If a default stops working, pick a current one with **List models**.
 
@@ -90,6 +94,7 @@ All are optional.
 | `OPENAI_API_KEY` | ChatGPT key, used if none is saved in Settings |
 | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Gemini key, used if none is saved in Settings |
 | `ANTHROPIC_WORKSPACE_ID` | Claude workspace ID, used if none is saved in Settings |
+| `LLAMA_API_KEY` | Meta (Llama API) key, used if none is saved in Settings |
 | `ROUNDTABLE_DATA` | Folder for settings and conversations, in place of the default |
 
 A key saved in Settings takes priority over an environment variable.
