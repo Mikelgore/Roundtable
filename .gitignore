@@ -1,0 +1,4 @@
+# API keys and saved conversations — never commit these
+roundtable_data/
+__pycache__/
+*.pyc
