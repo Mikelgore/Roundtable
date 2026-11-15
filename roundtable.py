@@ -50,11 +50,13 @@ PROVIDERS = {
     },
     "meta": {
         "name": "Meta",
-        "env": ["LLAMA_API_KEY"],
-        "default_model": "Llama-4-Maverick-17B-128E-Instruct-FP8",
-        # Meta's hosted Llama API, OpenAI-compatible surface. Access is
-        # preview / waitlist (US-only at time of writing); see the README.
-        "base": os.environ.get("ROUNDTABLE_LLAMA_URL", "https://api.llama.com/compat/v1"),
+        "env": ["MODEL_API_KEY"],
+        "default_model": "muse-spark-1.3",
+        # Meta Model API (dev.meta.ai), OpenAI-compatible Chat Completions
+        # at https://api.meta.ai/v1. Keys look like LLM|... and are created
+        # in the Model API dashboard. This is NOT the old Llama API
+        # (api.llama.com) — that is gone as a first-party product.
+        "base": os.environ.get("ROUNDTABLE_META_URL", "https://api.meta.ai/v1"),
     },
 }
 
@@ -237,8 +239,9 @@ def call_gemini(key, model, system, messages):
 
 
 def call_meta(key, model, system, messages):
-    # Llama API, OpenAI-compatible endpoint: POST /chat/completions with a
-    # Bearer key, returning the usual OpenAI-style choices[0].message.content.
+    # Meta Model API, OpenAI-compatible endpoint: POST /chat/completions
+    # with a Bearer key, returning the usual OpenAI-style
+    # choices[0].message.content.
     body = {
         "model": model,
         "messages": ([{"role": "system", "content": system}] if system else [])
@@ -623,7 +626,7 @@ label{display:block;font-size:12.5px;color:var(--muted);margin:8px 0 3px}
 "use strict";
 const ORDER = ['claude','chatgpt','gemini','meta'];
 const NAMES = {claude:'Claude', chatgpt:'ChatGPT', gemini:'Gemini', meta:'Meta'};
-const KEY_HELP = {claude:'console.anthropic.com', chatgpt:'platform.openai.com', gemini:'aistudio.google.com', meta:'llama.developer.meta.com'};
+const KEY_HELP = {claude:'console.anthropic.com', chatgpt:'platform.openai.com', gemini:'aistudio.google.com', meta:'dev.meta.ai'};
 const CROSS_TEXT = "Cross-examination round. Read the other participants' most recent answers above. " +
   "Point out specific errors, gaps or unsupported claims; say where you agree and where you disagree; " +
   "then state whether you are keeping or changing your position, and why. Do not agree just to be agreeable. " +

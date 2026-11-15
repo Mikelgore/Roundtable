@@ -14,11 +14,11 @@ Roundtable is a single Python file. It runs a small web server on your own compu
 | Claude | console.anthropic.com | `sk-ant-` |
 | ChatGPT | platform.openai.com | `sk-proj-` or `sk-` |
 | Gemini | aistudio.google.com | usually `AIza` |
-| Meta | llama.developer.meta.com | issued in the Llama API dashboard |
+| Meta | dev.meta.ai | `LLM\|...` — issued in the Model API dashboard |
 
 API access is billed per use and is separate from a Claude, ChatGPT, or Gemini chat subscription. Each API account needs its own billing set up.
 
-Meta is the odd one out: there is no public API for the Meta AI chat app. Roundtable uses Meta's hosted **Llama API** (`api.llama.com`, OpenAI-compatible) instead. At time of writing that API is in preview behind a waitlist and reported as US-only, so request access first and paste in the key once approved.
+Meta uses the **Meta Model API** (`https://api.meta.ai/v1`, OpenAI-compatible Chat Completions, model `muse-spark-1.3`). Create the key in the Model API dashboard at dev.meta.ai — it is a different API from the old Llama API (`api.llama.com`), which is gone as a first-party product, so a Llama key will not work here and vice versa.
 
 ## Quick start
 
@@ -73,7 +73,7 @@ Default models:
 | Claude | `claude-opus-5-5` |
 | ChatGPT | `gpt-6.1-sol` |
 | Gemini | `gemini-4-argon` |
-| Meta | `Llama-4-Maverick-17B-128E-Instruct-FP8` |
+| Meta | `muse-spark-1.3` |
 
 Providers retire models over time. If a default stops working, pick a current one with **List models**.
 
@@ -94,7 +94,7 @@ All are optional.
 | `OPENAI_API_KEY` | ChatGPT key, used if none is saved in Settings |
 | `GEMINI_API_KEY` or `GOOGLE_API_KEY` | Gemini key, used if none is saved in Settings |
 | `ANTHROPIC_WORKSPACE_ID` | Claude workspace ID, used if none is saved in Settings |
-| `LLAMA_API_KEY` | Meta (Llama API) key, used if none is saved in Settings |
+| `MODEL_API_KEY` | Meta (Model API) key, used if none is saved in Settings |
 | `ROUNDTABLE_DATA` | Folder for settings and conversations, in place of the default |
 
 A key saved in Settings takes priority over an environment variable.
