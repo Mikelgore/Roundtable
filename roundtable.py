@@ -70,6 +70,28 @@ class ProviderError(Exception):
     pass
 
 
+def atomic_replace(src, dst, tries=5):
+    """os.replace with a short retry loop.
+
+    On Windows the rename fails with PermissionError (WinError 5) if the
+    destination is briefly locked — OneDrive sync, antivirus, or a second
+    Roundtable instance saving the same conversation. Retrying a few
+    times over ~1 second clears the transient locks; a lock that is still
+    held after that is a real problem and the error is raised as before.
+    """
+    last = None
+    for _ in range(tries):
+        try:
+            os.replace(src, dst)
+            return
+        except PermissionError as e:
+            last = e
+            time.sleep(0.2)
+    if last is not None:
+        raise last
+    os.replace(src, dst)
+
+
 # ----------------------------------------------------------------- config ---
 
 def load_config():
@@ -93,7 +115,7 @@ def save_config(cfg):
             os.chmod(tmp, 0o600)
         except OSError:
             pass
-        os.replace(tmp, CONFIG_PATH)
+        atomic_replace(tmp, CONFIG_PATH)
 
 
 def get_key(cfg, provider):
@@ -418,7 +440,7 @@ class Handler(BaseHTTPRequestHandler):
                 CONV_DIR.mkdir(parents=True, exist_ok=True)
                 tmp = p.with_suffix(".tmp%d" % threading.get_ident())
                 tmp.write_text(json.dumps(body), encoding="utf-8")
-                os.replace(tmp, p)
+                atomic_replace(tmp, p)
                 return self._send(200, {"ok": True, "updated": body["updated"]})
             return self._send(404, {"error": "not found"})
         except ProviderError as e:
